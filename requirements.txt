@@ -4,4 +4,3 @@ opencv-python-headless
 streamlit-webrtc 
 pandas
 altair
-threading
