@@ -11,6 +11,7 @@ import tempfile # เก็บ temp ไม่ใช้ก็ลบ
 import os
 import shutil 
 import av # framerate
+import threading
 
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration, WebRtcMode
 import logging
@@ -71,19 +72,37 @@ def selectModel(modelName: list):
 # ตาม standard lib อยาก process ต้องสร้าง class ที่ inherit มาจาก VideoTransformerBase # realtime detection [1]
 # https://github.com/whitphx/streamlit-webrtc
 class YOLOVideoTransformer(VideoTransformerBase):
-    def __init__(self, modelsN: dict, confidenceThreshold: float, imgsz: int): # constructor สร้างครั้งเดียวตอน webrtc_streamer โดนเรียก // init ใช้ตลอดตามค่าที่ set ไว้ // process = (models, confidence, imgsz) / framerate]
-        self.models = modelsN
-        self.confidenceThreshold = confidenceThreshold
-        self.imgsz = imgsz 
+    def __init__(self): # constructor สร้างครั้งเดียวตอน webrtc_streamer โดนเรียก
+        self.models = {}
+        self.confidenceThreshold = 0.40 # def value
+        self.imgsz = INFERENCE_IMG_SIZE # def value
+        self.params_lock = threading.Lock() # lock thread-safe param updates
+
+    def update_params(self, params: dict):
+        """Safely update parameters from the main thread."""
+        with self.params_lock:
+            if "modelsN" in params:
+                self.models = params["modelsN"]
+            if "confidenceThreshold" in params:
+                self.confidenceThreshold = params["confidenceThreshold"]
+            if "imgsz" in params:
+                self.imgsz = params["imgsz"]
+
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame: # โดนเรียกทุก frame
         img = frame.to_ndarray(format="bgr24") # มันจะแปลง frame เป็น np array ให้ (YOLO, cv2) ใช้ *** [case diff(format)] *** \start/
         processedFrames = []
 
-        for name, model in self.models.items(): # 2 in 1 loop serial process ไม่ได้ parallel
-            results = model(img, conf=self.confidenceThreshold, imgsz=self.imgsz, verbose=False)                   # 1.) model (X) process
-            processedImage = results[0].plot()                                                                     # 2.) เอาผลลัพธ์มา plot() บน image (X) // return np array (BGR)
-            cv2.putText(processedImage, f"[{name}]", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)        # 3.) แปะ text บอก model
-            processedFrames.append(processedImage)                                                                 # 4.) เก็บ output model ใน list                      
+        with self.params_lock:
+            models_to_use = self.models
+            conf_to_use = self.confidenceThreshold
+            imgsz_to_use = self.imgsz
+        
+        for name, model in models_to_use.items(): # 2 in 1 loop serial process ไม่ได้ parallel
+            results = model(img, conf=conf_to_use, imgsz=imgsz_to_use, verbose=False)                 # 1.) model (X) process
+            processedImage = results[0].plot()                                                       # 2.) เอาผลลัพธ์มา plot() บน image (X) // return np array (BGR)
+            cv2.putText(processedImage, f"[{name}]", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)    # 3.) แปะ text บอก model
+            processedFrames.append(processedImage)                                                   # 4.) เก็บ output model ใน list                 
+        
         if len(processedFrames) == 2: # np.hstack ต่อ model
             finalFrame = np.hstack(processedFrames)
         elif len(processedFrames) == 1:
@@ -98,11 +117,11 @@ def processAndDisplayDetection(frameOrImage, modelsN: dict, conf: float):
     inputFormat = frameOrImage 
 
     for name, model in modelsN.items():
-        results = model(inputFormat, conf=conf, imgsz=INFERENCE_IMG_SIZE, verbose=False)                            # 1
-        detectedImage = results[0].plot()                                                                           # 2
+        results = model(inputFormat, conf=conf, imgsz=INFERENCE_IMG_SIZE, verbose=False)                      # 1
+        detectedImage = results[0].plot()                                                                    # 2
         detectedImageRGB = cv2.cvtColor(detectedImage, cv2.COLOR_BGR2RGB)
-        cv2.putText(detectedImageRGB, f"[{name}]", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)           # 3
-        processedImages.append(detectedImageRGB)                                                                    # 4
+        cv2.putText(detectedImageRGB, f"[{name}]", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)     # 3
+        processedImages.append(detectedImageRGB)                                                             # 4
     if len(processedImages) == 2:
         final_image = np.hstack(processedImages)
         caption = "Side-by-Side"
@@ -169,12 +188,10 @@ def handleVideoSource(loadedModels: dict, confidence: float):
         finally:
             shutil.rmtree(tempDir, ignore_errors=True)
 
-
-def handleWebcamSource(loadedModels: dict, confidence: float):
+def handleWebcamSource(webrtcParams: dict):
     st.write("### Select Source Option : :orange[[Webcam]]")
 
-    webrtc_streamer( key="real-time-detection", mode=WebRtcMode.SENDRECV, rtc_configuration=RTC_CONFIGURATION, video_processor_factory=lambda: YOLOVideoTransformer(loadedModels, confidence, INFERENCE_IMG_SIZE ),
-        media_stream_constraints={
+    ctx = webrtc_streamer( key="real-time-detection", mode=WebRtcMode.SENDRECV, rtc_configuration=RTC_CONFIGURATION, video_processor_factory=YOLOVideoTransformer, media_stream_constraints={
             "video": {
                 "width": {"ideal": 640}, 
                 "height": {"ideal": 480},
@@ -184,6 +201,9 @@ def handleWebcamSource(loadedModels: dict, confidence: float):
         },
         async_processing=True,
     )
+
+    if ctx.video_transformer:
+        ctx.video_transformer.update_params(webrtcParams)
 
 st.set_page_config(page_title="Demo", layout="wide")
 
@@ -196,6 +216,12 @@ st.markdown("---")
 modelName, confidence, sourceRadio = sideBarConfig()
 loadedModels = selectModel(modelName)
 
+webrtcParams = {
+    "modelsN": loadedModels,
+    "confidenceThreshold": confidence,
+    "imgsz": INFERENCE_IMG_SIZE
+}
+
 if not loadedModels:
     st.warning("🚨 Please select at least one Model and ensure it loads correctly to proceed :)")
 
@@ -204,4 +230,4 @@ if sourceRadio == 'Image':
 elif sourceRadio == 'Video':
     handleVideoSource(loadedModels, confidence)
 elif sourceRadio == 'Webcam (Real-time)':
-    handleWebcamSource(loadedModels, confidence)
+    handleWebcamSource(webrtcParams)
