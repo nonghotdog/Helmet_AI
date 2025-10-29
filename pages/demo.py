@@ -115,7 +115,7 @@ def processAndDisplayDetection(frameOrImage, modelsN: dict, conf: float):
     return final_image, caption
 
 def handleImageSource(loadedModels: dict, confidence: float):
-    st.write("### Image Helmet or Non_Helmet Detection")
+    st.write("### Select Source Option : :orange[[Image]]")
     uploadedFile = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
 
     if uploadedFile is not None:
@@ -131,7 +131,7 @@ def handleImageSource(loadedModels: dict, confidence: float):
 
 
 def handleVideoSource(loadedModels: dict, confidence: float):
-    st.write("### Video Helmet or Non_Helmet Detection")
+    st.write("### Select Source Option : :orange[[Video]]")
     uploadedFile = st.file_uploader("Upload a video...", type=["mp4", "avi", "mov", "mkv"])
 
     if uploadedFile is not None:
@@ -171,7 +171,7 @@ def handleVideoSource(loadedModels: dict, confidence: float):
 
 
 def handleWebcamSource(loadedModels: dict, confidence: float):
-    st.write("### Real-time Webcam Detection")
+    st.write("### Select Source Option : :orange[[Webcam]]")
 
     webrtc_streamer( key="real-time-detection", mode=WebRtcMode.SENDRECV, rtc_configuration=RTC_CONFIGURATION, video_processor_factory=lambda: YOLOVideoTransformer(loadedModels, confidence, INFERENCE_IMG_SIZE ),
         media_stream_constraints={
@@ -186,7 +186,11 @@ def handleWebcamSource(loadedModels: dict, confidence: float):
     )
 
 st.set_page_config(page_title="Demo", layout="wide")
-st.title("Helmet or Non_Helmet Detection Application")
+
+a,b = st.columns([0.7,0.3])
+a.write("# :green[Helmet] or :red[Non_Helmet] Detector")
+with b.expander("ดูวิธีใช้การงาน"):
+    st.image("images/how-to.gif")
 st.markdown("---")
 
 modelName, confidence, sourceRadio = sideBarConfig()

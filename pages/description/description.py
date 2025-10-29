@@ -7,27 +7,32 @@ st.divider()
 
 st.write('''## คือ :orange[Model] อะไร ?''')
 l,m,r = st.columns(3)
-m.image("images/roboflow1-non.png", caption="จะใส่ .gif", width=400)
+m.image("images/demo.gif", caption="Sample Demo")
 st.write('''### :orange[Motorcycle Rider Helmet-Wearing Detector] ถูกพัฒนามาเพื่อ:green[ตรวจจับ]ผู้ที่ :red[\"ไม่สวมใส่หมวกนิรภัย\"]''')
 
 q,w,e = st.columns(3)
 st.divider()
 urlRobodflow = "https://app.roboflow.com"
 st.write('''
-         ## about :blue[Dataset]
+         ## About :blue[Dataset]
          1. นำเข้า Datasets ไปที่ [Roboflow](%s) เพื่อเตรียมทำการ label'''% urlRobodflow)
-a1,a2,a3 = st.columns(3)
-a1.image("images/roboflow1-non.png", caption="non-labeled dataset [1]",)
-a2.image("images/roboflow2-non.png", caption="non-labeled dataset [2]",)
-a3.image("images/roboflow3-non.png", caption="non-labeled dataset [3]",)
+
+with st.container(border=True):
+    a1,a2,a3 = st.columns(3)
+    a1.image("images/roboflow1-non.png", caption="non-labeled dataset [1]",)
+    a2.image("images/roboflow2-non.png", caption="non-labeled dataset [2]",)
+    a3.image("images/roboflow3-non.png", caption="non-labeled dataset [3]",)
+
 st.write("2. label รูปภาพทั้งหมด โดนจะมี class object :blue[2 ประเภท] คือ")
-c1,c2 = st.columns(2)
-c1.metric("คนขับมอเตอร์ไซค์ ที่:green[สวมใส่หมวกนิรภัย]", "HELMET", border=True, delta_color="off")
-c2.metric("คนขับมอเตอร์ไซค์ ที่:red[ไม่สวมใส่หมวกนิรภัย]", "NO_HELMET", border=True)
-b1,b2,b3 = st.columns(3)
-b1.image("images/roboflow1.png", caption="labeled dataset [1]",)
-b2.image("images/roboflow2.png", caption="labeled dataset [2]",)
-b3.image("images/roboflow3.png", caption="labeled dataset [3]",)
+with st.container(border=True):
+    c1,c2 = st.columns(2)
+    c1.metric("คนขับมอเตอร์ไซค์ ที่:green[สวมใส่หมวกนิรภัย]", "HELMET", border=True, delta_color="off")
+    c2.metric("คนขับมอเตอร์ไซค์ ที่:red[ไม่สวมใส่หมวกนิรภัย]", "NO_HELMET", border=True)
+    with st.container(border=True):
+        b1,b2,b3 = st.columns(3)
+        b1.image("images/roboflow1.png", caption="labeled dataset [1]",)
+        b2.image("images/roboflow2.png", caption="labeled dataset [2]",)
+        b3.image("images/roboflow3.png", caption="labeled dataset [3]",)
 
 st.write('''
          3. เมื่อทำการ label ผลเฉลยของ datasets ทั้งหมดแล้ว ผมจะแบ่ง dataset ออกเป็น :blue[3] part ก็คือ
@@ -41,119 +46,109 @@ d2.metric("Training", "636 รูป", border=True)
 d3.metric("Validation ", "30 รูป", border=True)
 d4.metric("Testing ", "30 รูป", border=True)
 
-st.write('''3. กำหนด batch training ปรับ pixel ให้อยู่ใน range 0-1 และเพิ่มตัว augmentation เพื่อความหลากหลาย จะได้ไม่ overfit ดีกับ unseen data''')
-st.code('''
-    rescale=1./255,           # range pixel 0-1
-    rotation_range=30,        # range หมุนๆ
-    width_shift_range=0.2,    # range y
-    height_shift_range=0.2,   # range x
-    shear_range=0.2,          # range บิดภาพ
-    zoom_range=0.2,           # range zoom
-    horizontal_flip=True,     # เปิดกลับ imaghe
-    fill_mode='nearest'       # เติม pixel
-)
-''', language="python")
-
-st.write('''4. เหมือนกับ train_datagen ทำการ norm แต่ไม่มีตัว augmentation เพราะจะเอามา valid และ test ''')
-st.code('''
-    validation_datagen = ImageDataGenerator(rescale=1./255) # ทำ pre ข้อสอบ
-    train_generator = train_datagen.flow_from_directory(
-        train_dir,
-        target_size=(256, 256),
-        batch_size=32,
-        class_mode='categorical',
-        shuffle=True
-    )
-    validation_generator = validation_datagen.flow_from_directory( # ทำ pre ข้อสอบ
-        validation_dir,
-        target_size=(256, 256),
-        batch_size=32,
-        class_mode='categorical',
-        shuffle=False
-    )
-    test_generator = validation_datagen.flow_from_directory( # สอบจริง
-        test_dir,
-        target_size=(256, 256),
-        batch_size=32,
-        class_mode='categorical',
-        shuffle=False
-    )
-''', language="python")
 st.divider()
 
-st.write('''
-         ## :blue[Training] Model :orange[Algoritms]
-         ผมให้ model เรียนรู้แบบ Transfer Learning โดยใช้ **VGG16(CNN)** (เป็นmodelที่เคยฝึกมาก่อนแล้ว) เพราะประหยัดเวลาและทรัพยากรในการ train modle ส่วนใหญ่จะเน้นไปที่การออกแบบตัว augment
-        
-         # AGG16 ''')
-# st.image("graphic/pic/vgg16.png", caption="source : ***https://www.cs.toronto.edu/~frossard/post/vgg16/***")
-st.write('''
-        ตามชื่อเลย AGG16 มี 16 layer ใช้ filter ขนาดเล็ก เช่น 3x3 convolution filters และ stride = 1 เนื่องจากการ ขนาดของ filter ที่เล็ก การทำ padding เลยสำคัญ แต่จำนวน layer มีขนาดลึกเลยเอามาหักล้างหรือทดแทนกันได้ และ max pooling 2x2 และ หลังจากโดน convolution และ pooling ข้อมูลที่ได้จะถูกแปลงเป็น vector ไปยัง fully connected เพื่อ output
-        แล้ว AGG16 ก็เหมือนกับ deep learning ตัวอื่นๆ ใช้แนวคิด gradient descent กับ backpropagation 
+# MODEL
+urlYOLO= "https://docs.ultralytics.com"
 
-         ***https://www.youtube.com/watch?v=QW7aygOH22I&ab_channel=Wuttipong%E0%B8%A7%E0%B8%B8%E0%B8%92%E0%B8%B4%E0%B8%9E%E0%B8%87%E0%B8%A9%E0%B9%8CKumwilaisak%E0%B8%84%E0%B9%8D%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%A8%E0%B8%B1%E0%B8%81%E0%B8%94%E0%B8%B4%E0%B9%8C***''')
+st.write("## :blue[Training] Model :orange[Transfer Learning (YOLO)]")
 
-st.write('''''')
-st.write('''
-         1. กำหนดค่า VGG16 ไม่ให้ฝึกใน layer ของตัวเอง''')
-st.code('''
-    base_model = VGG16(weights='imagenet', include_top=False, input_shape=(256, 256, 3))
-    base_model.trainable = False '''
-, language="python")
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+            โดยการพัฒนาเพื่อนผมเลยเลือกที่จะใช้เทคนิคที่ได้เรียนมาในห้องเรียน ซึ่งก็คือการเรียนรู้แบบ ***:orange[Transfer Learning]*** โดยเอา pre-trained model ของ [YOLO](%s) มาต่อยอดในการพัฒนาซึ่งมันมีการเรียนรู้ของการมองเห็นแบบพื้นฐานไปก่อนหน้าแล้ว เราแค่เอา datasets รูปภาพคนใส่หมวกกันน็อคยัดใส่ให้มัน แล้วหลังจากนั้น model จะ fine-tune เอง มันจะเรียนรู้ว่า'''% urlYOLO)
 
-st.write('''2. ต้องแปลงไปเป็น 1D เพื่อจะได้ไปเข้า dense(Fully Connected) ต่อไปได้''')
-st.code('''
-    # input
-    model = Sequential()
-    model.add(base_model)
-    model.add(Flatten()) '''
-, language="python")
+a,b,c = st.columns([1,3,1])
+b.code('''ไอ้วัตถุที่มีลักษณะกลมๆแข็งๆอยู่บนหัวคน จากที่เคยมาก่อนว่าเห็นเป็น'หัวคน' ---[Transfer Learning]---> ตอนนี้จะต้องเรียกว่า'Helmet' แล้ว''', language="python")
 
-st.write('''3. ออกแบบ layer dense กับ dropout และ กัน vanishing gradient''')
-st.code('''
-    # hindden
-    model.add(Dense(512, activation='relu'))
-    model.add(Dropout(0.5)) '''
-, language="python")
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+            มันจะค่อยๆปรับ internal weights เองทำให้ตรวจจับให้เก่งมากขึ้นและจะปรับโดยการเทียบ loss จากความแตกต่างของ output เมื่อเทียบกับ label ที่เป็นผลเฉลยที่เราตีกรอบไว้ ซึ่ง project นี้จะนำเสนอโดยใช้ pre-trained model 2 ตัวคือ''')    
 
-st.write('''4. หลังจากนั้นจะใช้ softmax ให้ output ออกมาเป็นค่า prob เพราะมีหลายประเภท''')
-st.code('''
-    # output
-    model.add(Dense(15, activation='softmax')) '''
-, language="python")
+st.image("images/yolov8.jpg", caption="source : ***https://github.com/ultralytics/ultralytics/issues/189***",)
 
-st.write('''5. ผมเลือกที่จะ step น้อยๆ เพราะไม่อยาก overfit และใช้ adam เป็นตัว optimizer เพราะคิดว่าที่ทำอยู่เหมาะกับการ adaptive learning rate ''')
-st.code('''
-    model.compile(optimizer=Adam(learning_rate=1e-4), loss='categorical_crossentropy', metrics=['accuracy']) '''
-, language="python")
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+            YOLOv8s และ YOLOv8m มีโครงสร้างพื้นฐานที่:green[เหมือนกัน]ใช้ส่วนประกอบหลักเดียวกัน :orange[(Backbone, Neck, Head)]''')
 
-st.write('''6. ทำการ callback เพื่อให้ save model ที่ดีที่สุดเก็บไว้ และเผื่อกรณีคอมดับเพราะผม train นานมาก เพราะข้อจำกัดของ hardware กับกลัวไฟไหม้หอ''')
-st.code('''
-    checkPoint = ModelCheckpoint('savePointAnimals.h5', monitor='val_loss', save_best_only=True) '''
-, language="python")
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+            1.) ***Backbone*** : ทำหน้าที่สกัด features ที่เด่นๆออกจากภาพ โดยจะลดขนาดของภาพไปเรื่อยๆ แล้วจะได้ feature map ที่มีความละเอียดต่างกัน''')
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+            2.) ***Neck*** : ทำหน้าที่นำ feature maps จาก Backbone ที่มีความละเอียดต่างกัน (เช่น features ที่จับภาพรวมกว้างๆ กับ features ที่จับรายละเอียดเล็กๆ) มาผสมผสานกัน''')
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+            3.) ***Head*** : ทำหน้าที่รับ feature ที่ผสมแล้วมาทำนายผลลัพธ์ (Bounding Boxes, Class, และ Confidence Score)''')
 
-st.write('''7. กำหนด epochs แบบเยอะๆไว้ก่อนถ้าไม่ถึง ก็สามารถใช้ที่ callback ไว้''')
-st.code('''
-    history = model.fit(
-    train_generator,
-    steps_per_epoch=train_generator.samples // train_generator.batch_size,
-    epochs=20,
-    validation_data=validation_generator,
-    validation_steps=validation_generator.samples // validation_generator.batch_size,
-    callbacks=[checkPoint]
-) '''
-, language="python")
 
-st.write('''8. mornitor เพื่อดู behavior ของ model''')
-st.code('''
-    test_loss, test_accuracy = model.evaluate(test_generator, steps=test_generator.samples//test_generator.batch_size)
-) '''
-, language="python")
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+        :red[แตกต่างกันที่] ก็คือ :orange[(Scale)]''')
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+            1.) ความกว้าง คือ จำนวน filters หรือ channels ในแต่ละชั้น convolutional''')
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+            2.) ความลึก คือ จำนวน layers หรือ blocks ในแต่ละส่วนของ network''')
+
+a,v8s,m,v8m,z = st.columns([2,16,1,16,2])
+with v8s:
+    with st.container(border=True):
+        st.write("### YOLOv8s(Small)")
+        st.write("- ความเร็วกว่า แต่ความแม่นยำน้อยกว่า")
+        st.write("- ใช้จำนวน Channels/Filters น้อยกว่า  ")
+        st.write("- จำนวน  Parameters(11.2 ล้าน) น้อยกว่า")
+        st.write("- ใช้จำนวน Channels/Filters มากกว่า")
+        st.write("- เหมาะกับการจับหมวกกันน็อคแบบ Real-time บนอุปกรณ์ขนาดเล็ก (Edge devices, Mobile)")
+
+with v8m:
+    with st.container(border=True):
+        st.write("### YOLOv8m(Medium)")
+        st.write("- เร็วน้อยกว่า แต่ความแม่นยำมากกว่า")
+        st.write("- ใช้จำนวน Channels/Filters มากกว่า")
+        st.write("- จำนวน Parameters(25.9) มากกว่า")
+        st.write("- ใช้จำนวน Channels/Filters มากกว่า")
+        st.write("- เหมาะกับงานที่ต้องการความแม่นยำสูงขึ้น แต่ยังคงความเร็วไว้ได้ (GPU, Server)")
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+        *** ไม่สามารถแยก model 's' และ 'm' โดยดูแค่โครงสร้างเพราะมันเหมือนกัน จะแยกได้ก็ต่อเมื่อดู "จำนวน" ของบล็อกพวกนั้ันนั้น และ "ขนาด" ของแต่ละบล็อก''')
+
 st.divider()
 
-st.write("# Timeline Accuracy & Hardware Details")
-st.video("https://youtu.be/Qon2JsmcW6g?si=NraX6nMCF9BQDPp7")
+st.write("## :blue[Testing] & :orange[Evaluation]")
 
-border, = st.columns(1)
-border.metric("Model Accuracy", "81.25 %", border=True)
-border.metric("Test Accuracy", "79.62 %", "-1.63 %", border=True)
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+            หลังจาก train ทั้ง 2 model จะเอาไปวัดผลว่า model ทำงานได้ดีแค่ไหนกับข้อมูลที่มันไม่เคยเห็นมาก่อนด้วย Precision, Recall, Precission-Recall, F1-Score ''')
+
+# Precision
+st.write("### :blue[Precision] Confidence Curve")
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+            จาก Confidence Curve จะทำให้เห็นว่าค่า Precision ของ model ที่ v8m มีความเสถียรมากกว่า model ที่ v8s ดังนั้น model ที่ :blue[ทำนายได้แม่น]ย่ำกว่า (:green[v8m] > :red[v8s])''')
+x,y,z = st.columns([1,8,1])
+with y:
+    a,b = st.columns(2)
+    a.image("images/v8s/BoxP_curve.png", caption="v8s",)
+    b.image("images/v8m/BoxP_curve.png", caption="v8m",)
+st.divider()
+
+# Recall
+st.write("### :blue[Recall] Confidence Curve")
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+            จาก Confidence Curve จะทำให้เห็นว่าค่าของช่วง Recall ที่ 0.2 - 0.8 ของ model v8m น้ันมีค่าที่สูงกว่า model v8s อย่างมีนัยยะสำคัญ ดั้งนั้น model v8m มี:blue[ความสารถในการตรวจจับ] object ที่มากกว่า model v8s (:green[v8m] > :red[v8s])''')
+x,y,z = st.columns([1,8,1])
+with y:
+    a,b = st.columns(2)
+    a.image("images/v8s/BoxR_curve.png", caption="v8s",)
+    b.image("images/v8m/BoxR_curve.png", caption="v8m",)
+st.divider()
+
+# Precision-Recall
+st.write("### :blue[Precission-Recall] Confidence Curve")
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+            จาก Confidence Curve แสดงให้เห็นได้อย่างชัดเจนว่า พื้นที่ใต้กราฟ(MAP)ของ model v8m นั้นมากกว่าอย่างมีนัยยะสำคัญ ดั้งนั้น สรุปได้ว่า model v8m สามารถ:blue[ใช้งานได้ครอบคลุม]มากกว่า (:green[v8m] > :red[v8s])''')
+x,y,z = st.columns([1,8,1])
+with y:
+    a,b = st.columns(2)
+    a.image("images/v8s/BoxPR_curve.png", caption="v8s",)
+    b.image("images/v8m/BoxPR_curve.png", caption="v8m",)
+st.divider()
+
+# F1-Score
+st.write("### :blue[F1-Score] Confidence Curve")
+st.markdown('''&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
+            จาก Confidence Curve แสดงให้เห็นถึงช่วง ค่าสูงสุด ของแต่ละ model ดั้งนั้น จากกราฟของ model v8m ณ ที่ค่า F1 มีค่ามากกว่า 0.4 model v8m สามารถทำช่วงที่กว้างกว่า อย่างมาก และ ค่าสูงสุดของ model v8m มีค่าโดยประมาณที่ 0.6 ซึ่ง มากกว่า model v8s มีค่าสูงสุดโดยประมาณ 0.45-0.5 สรุปได้ว่า model v8m สามารถ:blue[นำมาใช้งานจริง]ได้ดีกว่า (:green[v8m] > :red[v8s])''')
+x,y,z = st.columns([1,8,1])
+with y:
+    a,b = st.columns(2)
+    a.image("images/v8s/BoxF1_curve.png", caption="v8s",)
+    b.image("images/v8m/BoxF1_curve.png", caption="v8m",)
